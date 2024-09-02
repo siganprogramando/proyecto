@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administración de Noticias</title>
+    <style>
+        .news-item {
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .news-item img {
+            max-width: 100%;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Administración de Noticias</h1>
+    
+    <h2>Agregar Noticia</h2>
+    <form id="news-form">
+        <input type="hidden" id="news-id" value="">
+        <label for="news-title">Título:</label>
+        <input type="text" id="news-title" required>
+        <br>
+        <label for="news-content">Contenido:</label>
+        <textarea id="news-content" required></textarea>
+        <br>
+        <label for="news-image">Imagen:</label>
+        <input type="file" id="news-image">
+        <br>
+        <button type="submit">Guardar Noticia</button>
+    </form>
+
+    <h2>Noticias</h2>
+    <div id="news-list"></div>
+
+    <script>
+        const apiUrl = 'news.php';
+
+        document.getElementById('news-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const id = document.getElementById('news-id').value;
+            const title = document.getElementById('news-title').value;
+            const content = document.getElementById('news-content').value;
+            const image = document.getElementById('news-image').files[0];
+            const formData = new FormData();
+            
+            formData.append('action', id ? 'edit' : 'add');
+            if (id) formData.append('id', id);
+            formData.append('title', title);
+            formData.append('content', content);
+            if (image) formData.append('image', image);
+
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    fetchNews();
+                    clearForm();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        });
+
+        function fetchNews() {
+            const formData = new FormData();
+            formData.append('action', 'list');
+            
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                const newsListContainer = document.getElementById('news-list');
+                newsListContainer.innerHTML = '';
+
+                data.forEach(news => {
+                    const newsElement = document.createElement('div');
+                    newsElement.classList.add('news-item');
+                    newsElement.innerHTML = `
+                        <h2>${news.titulo}</h2>
+                        <p>${news.contenido}</p>
+                        ${news.imagen ? `<img src="uploads/${news.imagen}" alt="Imagen de la noticia">` : ''}
+                        <button onclick="editNews(${news.id}, '${news.titulo}', '${news.contenido}', '${news.imagen}')">Editar</button>
+                        <button onclick="deleteNews(${news.id})">Ocultar</button>
+                    `;
+                    newsListContainer.appendChild(newsElement);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function editNews(id, title, content, imageUrl) {
+            document.getElementById('news-id').value = id;
+            document.getElementById('news-title').value = title;
+            document.getElementById('news-content').value = content;
+            // Puedes manejar la vista previa de la imagen si es necesario.
+        }
+
+        function deleteNews(id) {
+            const formData = new FormData();
+            formData.append('action', 'delete');
+            formData.append('id', id);
+
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    fetchNews();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        function clearForm() {
+            document.getElementById('news-id').value = '';
+            document.getElementById('news-title').value = '';
+            document.getElementById('news-content').value = '';
+            document.getElementById('news-image').value = '';
+        }
+
+        // Cargar noticias al inicio
+        fetchNews();
+    </script>
+</body>
+</html>
